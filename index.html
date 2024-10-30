@@ -1,39 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tic-Tac-Toe</title>
-    <link rel="stylesheet" href="./Tic_Tac_TOE.css">
-</head>
-<body>
+    <link rel="stylesheet" href="/Tic_Tac_TOE.css" />
+  </head>
+  <body>
     <div class="msg-container hide">
-        <p id="msg">winner</p>
-        <button id="new-game">New Game</button>
+      <p id="msg">winner</p>
+      <button id="new-game">New Game</button>
     </div>
     <main>
-        <h1>Tic Tac Toe</h1>
-        <div class="container">
+      <h1>Tic Tac Toe</h1>
+      <div class="container">
         <div class="game">
-            <button class="box"></button>
-            <button class="box"></button>
-            <button class="box"></button>
-            <button class="box"></button>
-            <button class="box"></button>
-            <button class="box"></button>
-            <button class="box"></button>
-            <button class="box"></button>
-            <button class="box"></button>
+          <button class="box" data-index="0"></button>
+          <button class="box" data-index="1"></button>
+          <button class="box" data-index="2"></button>
+          <button class="box" data-index="3"></button>
+          <button class="box" data-index="4"></button>
+          <button class="box" data-index="5"></button>
+          <button class="box" data-index="6"></button>
+          <button class="box" data-index="7"></button>
+          <button class="box" data-index="8"></button>
         </div>
-        </div>
+      </div>
+      <button id="reset">Reset</button>
+    </main>
 
-        <button id="reset">Reset</button>
-</main>
-   
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+      import { getDatabase, ref, set, get, onValue, remove } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
+      const firebaseConfig = {
+        apiKey: "AIzaSyAHHJanF2c4FtmfGMuHrZCSSNpXIGJFYMU",
+        authDomain: "tictactoe-23bf9.firebaseapp.com",
+        projectId: "tictactoe-23bf9",
+        storageBucket: "tictactoe-23bf9.appspot.com",
+        messagingSenderId: "142714285043",
+        appId: "1:142714285043:web:6eeeb83cea2406a55c8086",
+        databaseURL: "https://tictactoe-23bf9-default-rtdb.firebaseio.com",
+      };
 
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
 
+      let boxes = document.querySelectorAll(".box");
+      let resetbtn = document.querySelector("#reset");
+      let newGame = document.querySelector("#new-game");
+      let msgcontainer = document.querySelector(".msg-container");
+      let msg = document.querySelector("#msg");
 
-    <script src="./Tic_Tac_TOe.js"></script>
-</body>
+      let turnO = true;
+      const winPatterns = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6],
+      ];
+
+      const resetGame = async () => {
+        turnO = true;
+        await remove(ref(db, "game"));
+        enableBoxes();
+        msgcontainer.classList.add("hide");
+      };
+
+      const updateBox = (index, symbol) => {
+        set(ref(db, `game/${index}`), { symbol });
+      };
+
+      const checkWinner = () => {
+        let gameBoard = Array.from(boxes).map(box => box.innerText);
+        for (let pattern of winPatterns) {
+          let [a, b, c] = pattern;
+          if (gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c]) {
+            showWinner(gameBoard[a]);
+            return true;
+          }
+        }
+        return false;
+      };
+
+      const showWinner = (winner) => {
+        msg.innerText = `Congratulations, ${winner} wins!`;
+        msgcontainer.classList.remove("hide");
+        disableBoxes();
+      };
+
+      boxes.forEach((box) => {
+        box.addEventListener("click", (e) => {
+          const index = e.target.getAttribute("data-index");
+          if (box.innerText === "") {
+            const symbol = turnO ? "O" : "X";
+            updateBox(index, symbol);
+            turnO = !turnO;
+          }
+        });
+      });
+
+      const syncGameState = () => {
+        onValue(ref(db, "game"), (snapshot) => {
+          const data = snapshot.val();
+          enableBoxes();
+          turnO = true;
+          if (data) {
+            Object.keys(data).forEach((key) => {
+              const symbol = data[key].symbol;
+              boxes[key].innerText = symbol;
+              boxes[key].disabled = true;
+              turnO = symbol === "O" ? false : true;
+            });
+          }
+          if (checkWinner()) disableBoxes();
+        });
+      };
+
+      const disableBoxes = () => {
+        boxes.forEach((box) => {
+          box.disabled = true;
+        });
+      };
+
+      const enableBoxes = () => {
+        boxes.forEach((box) => {
+          box.disabled = false;
+          box.innerText = "";
+        });
+      };
+
+      resetbtn.addEventListener("click", resetGame);
+      newGame.addEventListener("click", resetGame);
+
+      syncGameState();
+    </script>
+  </body>
 </html>
